@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { LESSONS, Lesson } from '../utils/lessonEngine';
+import { LESSONS, type Lesson } from '../utils/lessonEngine';
 import { usePlayback } from './PlaybackContext';
 
 interface LessonContextType {
