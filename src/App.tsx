@@ -2,6 +2,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { PlaybackProvider } from './context/PlaybackContext';
 import { LessonProvider } from './context/LessonContext';
+import { Analytics } from '@vercel/analytics/react';
 import { Navbar } from './components/Navbar';
 import { Piano } from './components/Piano';
 import { Metronome } from './components/Metronome';
@@ -35,6 +36,7 @@ function App() {
                   <p>PianoPal &copy; 2026 • Built with Web Audio API • MIT License</p>
                 </div>
               </main>
+              <Analytics />
             </div>
           </LessonProvider>
         </PlaybackProvider>
