@@ -15,6 +15,20 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --white-key-width: 64px;
+  --white-key-height: 224px;
+  --black-key-width: 40px;
+  --black-key-height: 128px;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --white-key-width: 48px;
+    --white-key-height: 180px;
+    --black-key-width: 32px;
+    --black-key-height: 100px;
+  }
 }
 
 body {

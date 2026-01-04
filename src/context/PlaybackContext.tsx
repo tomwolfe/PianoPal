@@ -113,6 +113,7 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const usePlayback = () => {
   const context = useContext(PlaybackContext);
   if (!context) throw new Error('usePlayback must be used within a PlaybackProvider');

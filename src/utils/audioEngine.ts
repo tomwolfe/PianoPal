@@ -4,7 +4,8 @@ class AudioEngine {
 
   private getContext() {
     if (!this.audioCtx) {
-      this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      this.audioCtx = new AudioContextClass();
     }
     return this.audioCtx;
   }
@@ -20,11 +21,9 @@ class AudioEngine {
     }
 
     const startTime = time || ctx.currentTime;
-
-    // Stop if already playing at this time (or before)
-    // For scheduled playback, we might not want to stop if it's in the future, 
-    // but for simplicity we'll keep it.
-    this.stopNote(noteId);
+    
+    // Clean up any existing oscillator for this note
+    this.stopNote(noteId, startTime);
 
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -32,53 +31,43 @@ class AudioEngine {
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(freq, startTime);
 
-    const attack = 0.01;
+    // ADSR Envelope
+    const attack = 0.02;
     const decay = 0.1;
-    const sustain = 0.3;
-    const release = 1.0;
+    const sustain = 0.4;
 
     gain.gain.setValueAtTime(0, startTime);
-    gain.gain.linearRampToValueAtTime(0.6, startTime + attack);
+    gain.gain.linearRampToValueAtTime(0.7, startTime + attack);
     gain.gain.exponentialRampToValueAtTime(sustain, startTime + attack + decay);
-    
-    const stopTime = startTime + attack + decay + release;
-    gain.gain.exponentialRampToValueAtTime(0.001, stopTime);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
 
     osc.start(startTime);
-    osc.stop(stopTime + 0.1);
 
     this.oscillators.set(noteId, { osc, gain });
   }
 
-  stopNote(noteId: string) {
+  stopNote(noteId: string, time?: number) {
     const existing = this.oscillators.get(noteId);
     if (existing) {
       const { osc, gain } = existing;
       const ctx = this.getContext();
-      const now = ctx.currentTime;
+      const stopTime = time || ctx.currentTime;
+      const release = 0.15;
+
+      gain.gain.cancelScheduledValues(stopTime);
+      gain.gain.setValueAtTime(gain.gain.value, stopTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, stopTime + release);
       
-      gain.gain.cancelScheduledValues(now);
-      gain.gain.setValueAtTime(gain.gain.value, now);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+      osc.stop(stopTime + release + 0.01);
       
-      setTimeout(() => {
-        try {
-          osc.stop();
-        } catch (e) {
-          // already stopped
-        }
-      }, 60);
       this.oscillators.delete(noteId);
     }
   }
 
   playClick(freq: number, time: number) {
     const ctx = this.getContext();
-    if (ctx.state === 'suspended') ctx.resume();
-
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
