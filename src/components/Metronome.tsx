@@ -1,8 +1,10 @@
 import React from 'react';
-import { useApp } from '../context/AppContext';
+import { useSettings } from '../context/SettingsContext';
+import { usePlayback } from '../context/PlaybackContext';
 
 export const Metronome: React.FC = () => {
-  const { bpm, setBpm, isMetronomeActive, setIsMetronomeActive } = useApp();
+  const { bpm, setBpm } = useSettings();
+  const { isMetronomeActive, setIsMetronomeActive } = usePlayback();
 
   return (
     <div className="flex flex-col items-center p-4 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">

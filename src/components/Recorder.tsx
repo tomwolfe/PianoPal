@@ -1,8 +1,8 @@
 import React from 'react';
-import { useApp } from '../context/AppContext';
+import { usePlayback } from '../context/PlaybackContext';
 
 export const Recorder: React.FC = () => {
-  const { isRecording, startRecording, stopRecording, recordedNotes, playRecording, isPlayingBack } = useApp();
+  const { isRecording, startRecording, stopRecording, recordedNotes, playRecording, isPlayingBack } = usePlayback();
 
   return (
     <div className="flex flex-col items-center p-4 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">

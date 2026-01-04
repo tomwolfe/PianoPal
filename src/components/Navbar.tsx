@@ -1,10 +1,10 @@
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { useApp } from '../context/AppContext';
+import { useSettings } from '../context/SettingsContext';
 
 export const Navbar: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
-  const { practiceMode, setPracticeMode } = useApp();
+  const { practiceMode, setPracticeMode } = useSettings();
 
   return (
     <nav className="flex justify-between items-center px-6 py-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">

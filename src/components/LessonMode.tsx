@@ -1,9 +1,9 @@
 import React from 'react';
-import { useApp } from '../context/AppContext';
+import { useLesson } from '../context/LessonContext';
 import { TWINKLE_TWINKLE } from '../utils/lessonEngine';
 
 export const LessonMode: React.FC = () => {
-  const { lessonActive, setLessonActive, lessonProgress, setLessonProgress, lessonFeedback: feedback } = useApp();
+  const { lessonActive, setLessonActive, lessonProgress, setLessonProgress, lessonFeedback: feedback } = useLesson();
 
   const currentNote = TWINKLE_TWINKLE.notes[lessonProgress];
 
