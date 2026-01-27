@@ -1,11 +1,29 @@
 import type { LessonNote } from '../types/piano';
 
+export type FeedbackType = 'perfect' | 'good' | 'late' | 'wrong' | null;
+
 export interface Lesson {
   id: string;
   name: string;
   description: string;
   notes: LessonNote[];
 }
+
+export const evaluateNoteTiming = (
+  playedNote: string,
+  expectedNote: string,
+  elapsedMs: number,
+  expectedMs: number
+): FeedbackType => {
+  if (playedNote !== expectedNote) return 'wrong';
+  
+  const diff = elapsedMs - expectedMs;
+  
+  if (Math.abs(diff) <= 100) return 'perfect';
+  if (Math.abs(diff) <= 250) return 'good';
+  if (diff > 250) return 'late';
+  return 'wrong'; // Too early
+};
 
 export const TWINKLE_TWINKLE: Lesson = {
   id: 'twinkle',

@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { LESSONS, type Lesson } from '../utils/lessonEngine';
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { LESSONS, type Lesson, evaluateNoteTiming, type FeedbackType } from '../utils/lessonEngine';
 import { usePlayback } from './PlaybackContext';
+import { audioEngine } from '../utils/audioEngine';
 
 interface LessonContextType {
   lessonActive: boolean;
@@ -9,8 +10,9 @@ interface LessonContextType {
   selectLesson: (id: string) => void;
   lessonProgress: number;
   setLessonProgress: (progress: number) => void;
-  lessonFeedback: 'correct' | 'wrong' | null;
+  lessonFeedback: FeedbackType;
   checkNote: (note: string) => void;
+  startTime: number;
 }
 
 const LessonContext = createContext<LessonContextType | undefined>(undefined);
@@ -20,7 +22,17 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [activeLesson, setActiveLesson] = useState<Lesson>(LESSONS[0]);
   const [lessonActive, setLessonActive] = useState(false);
   const [lessonProgress, setLessonProgress] = useState(0);
-  const [lessonFeedback, setLessonFeedback] = useState<'correct' | 'wrong' | null>(null);
+  const [lessonFeedback, setLessonFeedback] = useState<FeedbackType>(null);
+  
+  const lessonStartTime = useRef<number>(0);
+
+  const startLesson = useCallback((active: boolean) => {
+    if (active) {
+      lessonStartTime.current = audioEngine.currentTime;
+      setLessonProgress(0);
+    }
+    setLessonActive(active);
+  }, []);
 
   const selectLesson = useCallback((id: string) => {
     const lesson = LESSONS.find(l => l.id === id);
@@ -35,9 +47,20 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     onNotePlayed(note);
     
     if (lessonActive) {
-      const expectedNote = activeLesson.notes[lessonProgress]?.note;
-      if (note === expectedNote) {
-        setLessonFeedback('correct');
+      const expectedNote = activeLesson.notes[lessonProgress];
+      if (!expectedNote) return;
+
+      const elapsedMs = (audioEngine.currentTime - lessonStartTime.current) * 1000;
+      const feedback = evaluateNoteTiming(
+        note,
+        expectedNote.note,
+        elapsedMs,
+        expectedNote.time
+      );
+
+      setLessonFeedback(feedback);
+
+      if (feedback !== 'wrong' || note === expectedNote.note) {
         const nextProgress = lessonProgress + 1;
         setLessonProgress(nextProgress);
         
@@ -47,22 +70,21 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setLessonProgress(0);
           }, 1000);
         }
-        
-        setTimeout(() => setLessonFeedback(null), 500);
-      } else {
-        setLessonFeedback('wrong');
-        setTimeout(() => setLessonFeedback(null), 500);
       }
+      
+      setTimeout(() => setLessonFeedback(null), 500);
     }
   }, [lessonActive, lessonProgress, activeLesson, onNotePlayed]);
 
   return (
     <LessonContext.Provider value={{
-      lessonActive, setLessonActive,
+      lessonActive, 
+      setLessonActive: startLesson,
       activeLesson, selectLesson,
       lessonProgress, setLessonProgress,
       lessonFeedback,
-      checkNote
+      checkNote,
+      startTime: lessonStartTime.current
     }}>
       {children}
     </LessonContext.Provider>

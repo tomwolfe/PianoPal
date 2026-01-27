@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
-import type { RecordedNote } from '../types/piano';
+import type { RecordedNote, SavedRecording } from '../types/piano';
 import { audioEngine } from '../utils/audioEngine';
 import { PIANO_KEYS_MAP } from '../utils/pianoNotes';
 import { useSettings } from './SettingsContext';
@@ -11,14 +11,19 @@ interface PlaybackContextType {
   startRecording: () => void;
   stopRecording: () => void;
   recordedNotes: RecordedNote[];
-  playRecording: () => void;
+  playRecording: (notes?: RecordedNote[]) => void;
   isPlayingBack: boolean;
   onNotePlayed: (note: string) => void;
   lastPlayedNote: string | null;
   setLastPlayedNote: (note: string | null) => void;
+  saveRecording: (name: string) => void;
+  deleteRecording: (id: string) => void;
+  savedRecordings: SavedRecording[];
 }
 
 const PlaybackContext = createContext<PlaybackContextType | undefined>(undefined);
+
+const STORAGE_KEY = 'pianopal_recordings';
 
 export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { bpm } = useSettings();
@@ -27,10 +32,28 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [recordedNotes, setRecordedNotes] = useState<RecordedNote[]>([]);
   const [isPlayingBack, setIsPlayingBack] = useState(false);
   const [lastPlayedNote, setLastPlayedNote] = useState<string | null>(null);
+  const [savedRecordings, setSavedRecordings] = useState<SavedRecording[]>([]);
 
   const recordingStartTime = useRef<number>(0);
   const metronomeTimer = useRef<number | null>(null);
   const nextNoteTime = useRef<number>(0);
+
+  // Load saved recordings
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        setSavedRecordings(JSON.parse(stored));
+      } catch (e) {
+        console.error('Failed to parse saved recordings', e);
+      }
+    }
+  }, []);
+
+  // Save recordings to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(savedRecordings));
+  }, [savedRecordings]);
 
   // Metronome logic
   useEffect(() => {
@@ -65,6 +88,21 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setIsRecording(false);
   }, []);
 
+  const saveRecording = useCallback((name: string) => {
+    if (recordedNotes.length === 0) return;
+    const newRecording: SavedRecording = {
+      id: crypto.randomUUID(),
+      name: name || `Recording ${new Date().toLocaleString()}`,
+      timestamp: Date.now(),
+      notes: [...recordedNotes]
+    };
+    setSavedRecordings(prev => [newRecording, ...prev]);
+  }, [recordedNotes]);
+
+  const deleteRecording = useCallback((id: string) => {
+    setSavedRecordings(prev => prev.filter(r => r.id !== id));
+  }, []);
+
   const onNotePlayed = useCallback((note: string) => {
     setLastPlayedNote(note);
     if (isRecording) {
@@ -73,17 +111,16 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         startTime: performance.now() - recordingStartTime.current
       }]);
     }
-    // We'll clear the last played note after a short delay for visual feedback
-    // unless it's managed by the Piano component's own state
   }, [isRecording]);
 
-  const playRecording = useCallback(() => {
-    if (recordedNotes.length === 0 || isPlayingBack) return;
+  const playRecording = useCallback((notesToPlay?: RecordedNote[]) => {
+    const notes = notesToPlay || recordedNotes;
+    if (notes.length === 0 || isPlayingBack) return;
     setIsPlayingBack(true);
     
     const startTime = audioEngine.currentTime + 0.1;
     
-    recordedNotes.forEach(rn => {
+    notes.forEach(rn => {
       const key = PIANO_KEYS_MAP[rn.note];
       if (key) {
         const noteTime = startTime + rn.startTime / 1000;
@@ -96,8 +133,8 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     });
 
-    const lastNoteTime = recordedNotes.length > 0 
-      ? recordedNotes[recordedNotes.length - 1].startTime 
+    const lastNoteTime = notes.length > 0 
+      ? notes[notes.length - 1].startTime 
       : 0;
     setTimeout(() => setIsPlayingBack(false), lastNoteTime + 1000);
   }, [recordedNotes, isPlayingBack]);
@@ -106,7 +143,8 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     <PlaybackContext.Provider value={{
       isMetronomeActive, setIsMetronomeActive,
       isRecording, startRecording, stopRecording, recordedNotes, playRecording, isPlayingBack,
-      onNotePlayed, lastPlayedNote, setLastPlayedNote
+      onNotePlayed, lastPlayedNote, setLastPlayedNote,
+      saveRecording, deleteRecording, savedRecordings
     }}>
       {children}
     </PlaybackContext.Provider>

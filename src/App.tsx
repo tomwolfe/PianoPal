@@ -7,6 +7,7 @@ import { Navbar } from './components/Navbar';
 import { Piano } from './components/Piano';
 import { Metronome } from './components/Metronome';
 import { Recorder } from './components/Recorder';
+import { Library } from './components/Library';
 import { LessonMode } from './components/LessonMode';
 
 function App() {
@@ -19,9 +20,12 @@ function App() {
               <Navbar />
               
               <main className="flex-1 flex flex-col items-center py-8 px-4 gap-8">
-                <div className="w-full max-w-6xl flex flex-wrap justify-center gap-6">
-                  <Metronome />
-                  <Recorder />
+                <div className="w-full max-w-6xl flex flex-wrap justify-center items-start gap-6">
+                  <div className="flex flex-col gap-6 w-full max-w-sm">
+                    <Metronome />
+                    <Recorder />
+                  </div>
+                  <Library />
                 </div>
 
                 <div className="w-full max-w-6xl flex justify-center">

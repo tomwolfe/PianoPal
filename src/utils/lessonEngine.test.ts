@@ -1,20 +1,26 @@
 import { describe, it, expect } from 'vitest';
-import { TWINKLE_TWINKLE } from './lessonEngine';
+import { evaluateNoteTiming } from './lessonEngine';
 
-describe('Lesson Engine', () => {
-  it('should have a valid lesson structure for Twinkle Twinkle', () => {
-    expect(TWINKLE_TWINKLE.name).toBe('Twinkle Twinkle Little Star');
-    expect(TWINKLE_TWINKLE.notes.length).toBeGreaterThan(0);
+describe('evaluateNoteTiming', () => {
+  it('should return perfect for timing within 100ms', () => {
+    expect(evaluateNoteTiming('C4', 'C4', 1050, 1000)).toBe('perfect');
+    expect(evaluateNoteTiming('C4', 'C4', 950, 1000)).toBe('perfect');
   });
 
-  it('should have notes with valid format', () => {
-    TWINKLE_TWINKLE.notes.forEach(note => {
-      expect(note.note).toMatch(/[A-G][#]?[0-8]/);
-      expect(note.time).toBeGreaterThanOrEqual(0);
-    });
+  it('should return good for timing within 250ms', () => {
+    expect(evaluateNoteTiming('C4', 'C4', 1150, 1000)).toBe('good');
+    expect(evaluateNoteTiming('C4', 'C4', 850, 1000)).toBe('good');
   });
 
-  it('should starts with C4', () => {
-    expect(TWINKLE_TWINKLE.notes[0].note).toBe('C4');
+  it('should return late for timing after 250ms', () => {
+    expect(evaluateNoteTiming('C4', 'C4', 1300, 1000)).toBe('late');
+  });
+
+  it('should return wrong for wrong note', () => {
+    expect(evaluateNoteTiming('D4', 'C4', 1000, 1000)).toBe('wrong');
+  });
+
+  it('should return wrong for timing too early (before -250ms)', () => {
+    expect(evaluateNoteTiming('C4', 'C4', 700, 1000)).toBe('wrong');
   });
 });

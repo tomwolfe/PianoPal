@@ -10,6 +10,7 @@ class MockAudioContext {
     type: '',
     frequency: { setValueAtTime: vi.fn() },
     connect: vi.fn(),
+    disconnect: vi.fn(),
     start: vi.fn(),
     stop: vi.fn(),
   });
@@ -21,6 +22,15 @@ class MockAudioContext {
       cancelScheduledValues: vi.fn(),
       value: 1,
     },
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+  });
+  createDynamicsCompressor = vi.fn().mockReturnValue({
+    threshold: { setValueAtTime: vi.fn() },
+    knee: { setValueAtTime: vi.fn() },
+    ratio: { setValueAtTime: vi.fn() },
+    attack: { setValueAtTime: vi.fn() },
+    release: { setValueAtTime: vi.fn() },
     connect: vi.fn(),
   });
   destination = {};

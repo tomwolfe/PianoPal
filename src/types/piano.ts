@@ -13,6 +13,13 @@ export interface RecordedNote {
   duration?: number;
 }
 
+export interface SavedRecording {
+  id: string;
+  name: string;
+  timestamp: number;
+  notes: RecordedNote[];
+}
+
 export interface LessonNote {
   note: NoteName;
   time: number; // relative time in beats or ms

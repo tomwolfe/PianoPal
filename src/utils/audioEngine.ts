@@ -1,11 +1,29 @@
 class AudioEngine {
   private audioCtx: AudioContext | null = null;
-  private oscillators: Map<string, { osc: OscillatorNode; gain: GainNode }> = new Map();
+  private masterGain: GainNode | null = null;
+  private compressor: DynamicsCompressorNode | null = null;
+  private activeNotes: Map<string, Set<{ 
+    oscillators: OscillatorNode[]; 
+    gain: GainNode;
+  }>> = new Map();
 
   private getContext() {
     if (!this.audioCtx) {
       const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.audioCtx = new AudioContextClass();
+      
+      this.compressor = this.audioCtx.createDynamicsCompressor();
+      this.compressor.threshold.setValueAtTime(-24, this.audioCtx.currentTime);
+      this.compressor.knee.setValueAtTime(40, this.audioCtx.currentTime);
+      this.compressor.ratio.setValueAtTime(12, this.audioCtx.currentTime);
+      this.compressor.attack.setValueAtTime(0, this.audioCtx.currentTime);
+      this.compressor.release.setValueAtTime(0.25, this.audioCtx.currentTime);
+
+      this.masterGain = this.audioCtx.createGain();
+      this.masterGain.gain.setValueAtTime(0.8, this.audioCtx.currentTime);
+
+      this.compressor.connect(this.masterGain);
+      this.masterGain.connect(this.audioCtx.destination);
     }
     return this.audioCtx;
   }
@@ -22,14 +40,15 @@ class AudioEngine {
 
     const startTime = time || ctx.currentTime;
     
-    // Clean up any existing oscillator for this note
-    this.stopNote(noteId, startTime);
-
     const osc = ctx.createOscillator();
+    const harmonicOsc = ctx.createOscillator();
     const gain = ctx.createGain();
 
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(freq, startTime);
+
+    harmonicOsc.type = 'sine';
+    harmonicOsc.frequency.setValueAtTime(freq * 2, startTime);
 
     // ADSR Envelope
     const attack = 0.02;
@@ -41,28 +60,46 @@ class AudioEngine {
     gain.gain.exponentialRampToValueAtTime(sustain, startTime + attack + decay);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    harmonicOsc.connect(gain);
+    
+    // Create a local harmonic gain if we wanted more control, 
+    // but for now we'll just mix them and adjust volume via master or local gain.
+    // To satisfy the "20% volume" requirement for harmonics specifically:
+    const harmonicGain = ctx.createGain();
+    harmonicGain.gain.setValueAtTime(0.2, startTime);
+    harmonicOsc.disconnect();
+    harmonicOsc.connect(harmonicGain);
+    harmonicGain.connect(gain);
+
+    gain.connect(this.compressor!);
 
     osc.start(startTime);
+    harmonicOsc.start(startTime);
 
-    this.oscillators.set(noteId, { osc, gain });
+    const noteInstance = { oscillators: [osc, harmonicOsc], gain };
+    if (!this.activeNotes.has(noteId)) {
+      this.activeNotes.set(noteId, new Set());
+    }
+    this.activeNotes.get(noteId)!.add(noteInstance);
   }
 
   stopNote(noteId: string, time?: number) {
-    const existing = this.oscillators.get(noteId);
-    if (existing) {
-      const { osc, gain } = existing;
+    const instances = this.activeNotes.get(noteId);
+    if (instances) {
       const ctx = this.getContext();
       const stopTime = time || ctx.currentTime;
       const release = 0.15;
 
-      gain.gain.cancelScheduledValues(stopTime);
-      gain.gain.setValueAtTime(gain.gain.value, stopTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, stopTime + release);
+      instances.forEach(instance => {
+        const { oscillators, gain } = instance;
+        gain.gain.cancelScheduledValues(stopTime);
+        gain.gain.setValueAtTime(gain.gain.value, stopTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, stopTime + release);
+        
+        oscillators.forEach(osc => osc.stop(stopTime + release + 0.01));
+      });
       
-      osc.stop(stopTime + release + 0.01);
-      
-      this.oscillators.delete(noteId);
+      this.activeNotes.delete(noteId);
     }
   }
 
@@ -78,7 +115,7 @@ class AudioEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(this.masterGain!);
 
     osc.start(time);
     osc.stop(time + 0.05);
