@@ -4,35 +4,36 @@ import { PIANO_KEYS, PIANO_KEYS_MAP } from '../utils/pianoNotes';
 import { useSettings } from '../context/SettingsContext';
 import { usePlayback } from '../context/PlaybackContext';
 import { useLesson } from '../context/LessonContext';
-import { audioEngine } from '../utils/audioEngine';
+import { useAudioEngine } from '../hooks/useAudioEngine';
 
 export const Piano: React.FC = () => {
   const { practiceMode } = useSettings();
   const { lastPlayedNote } = usePlayback();
   const { checkNote } = useLesson();
+  const { playNote, stopNote } = useAudioEngine();
   const [activeNotes, setActiveNotes] = useState<Set<string>>(new Set());
+  const activeNotesRef = useRef<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleNoteStart = useCallback((note: string) => {
-    if (activeNotes.has(note)) return;
+    if (activeNotesRef.current.has(note)) return;
 
     const keyInfo = PIANO_KEYS_MAP[note];
     if (keyInfo) {
-      audioEngine.playNote(keyInfo.freq, note);
+      playNote(keyInfo.freq, note);
+      activeNotesRef.current.add(note);
+      setActiveNotes(new Set(activeNotesRef.current));
+      checkNote(note);
     }
-
-    setActiveNotes(prev => new Set(prev).add(note));
-    checkNote(note);
-  }, [checkNote, activeNotes]);
+  }, [checkNote, playNote]);
 
   const handleNoteEnd = useCallback((note: string) => {
-    audioEngine.stopNote(note);
-    setActiveNotes(prev => {
-      const next = new Set(prev);
-      next.delete(note);
-      return next;
-    });
-  }, []);
+    if (!activeNotesRef.current.has(note)) return;
+
+    stopNote(note);
+    activeNotesRef.current.delete(note);
+    setActiveNotes(new Set(activeNotesRef.current));
+  }, [stopNote]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

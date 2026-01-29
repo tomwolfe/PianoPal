@@ -16,7 +16,13 @@ export const LessonMode: React.FC = () => {
   } = useLesson();
 
   const [lessonTime, setLessonTime] = useState(0);
+  const [prevActive, setPrevActive] = useState(lessonActive);
   const rafRef = useRef<number>(0);
+
+  if (lessonActive !== prevActive) {
+    setPrevActive(lessonActive);
+    setLessonTime(0);
+  }
 
   useEffect(() => {
     if (lessonActive) {
@@ -28,7 +34,6 @@ export const LessonMode: React.FC = () => {
       rafRef.current = requestAnimationFrame(update);
     } else {
       cancelAnimationFrame(rafRef.current);
-      setLessonTime(0);
     }
     return () => cancelAnimationFrame(rafRef.current);
   }, [lessonActive, startTime]);

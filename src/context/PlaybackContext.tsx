@@ -3,6 +3,7 @@ import type { RecordedNote, SavedRecording } from '../types/piano';
 import { audioEngine } from '../utils/audioEngine';
 import { PIANO_KEYS_MAP } from '../utils/pianoNotes';
 import { useSettings } from './SettingsContext';
+import { storage } from '../utils/storage';
 
 interface PlaybackContextType {
   isMetronomeActive: boolean;
@@ -32,27 +33,17 @@ export const PlaybackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [recordedNotes, setRecordedNotes] = useState<RecordedNote[]>([]);
   const [isPlayingBack, setIsPlayingBack] = useState(false);
   const [lastPlayedNote, setLastPlayedNote] = useState<string | null>(null);
-  const [savedRecordings, setSavedRecordings] = useState<SavedRecording[]>([]);
+  const [savedRecordings, setSavedRecordings] = useState<SavedRecording[]>(() => 
+    storage.get<SavedRecording[]>(STORAGE_KEY, [])
+  );
 
   const recordingStartTime = useRef<number>(0);
   const metronomeTimer = useRef<number | null>(null);
   const nextNoteTime = useRef<number>(0);
 
-  // Load saved recordings
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setSavedRecordings(JSON.parse(stored));
-      } catch (e) {
-        console.error('Failed to parse saved recordings', e);
-      }
-    }
-  }, []);
-
   // Save recordings to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(savedRecordings));
+    storage.set(STORAGE_KEY, savedRecordings);
   }, [savedRecordings]);
 
   // Metronome logic

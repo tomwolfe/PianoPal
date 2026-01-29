@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Theme } from '../types/piano';
+import { storage } from '../utils/storage';
 
 interface ThemeContextType {
   theme: Theme;
@@ -10,12 +11,11 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('theme');
-    return (saved as Theme) || 'dark';
+    return storage.getRaw('theme', 'dark') as Theme;
   });
 
   useEffect(() => {
-    localStorage.setItem('theme', theme);
+    storage.setRaw('theme', theme);
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {

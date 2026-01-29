@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { storage } from '../utils/storage';
 
 interface SettingsContextType {
   bpm: number;
@@ -10,11 +11,11 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [bpm, setBpm] = useState(() => Number(localStorage.getItem('bpm')) || 120);
+  const [bpm, setBpm] = useState(() => storage.get<number>('bpm', 120));
   const [practiceMode, setPracticeMode] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem('bpm', bpm.toString());
+    storage.set('bpm', bpm);
   }, [bpm]);
 
   return (

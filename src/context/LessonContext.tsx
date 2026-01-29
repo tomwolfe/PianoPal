@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { LESSONS, type Lesson, evaluateNoteTiming, type FeedbackType } from '../utils/lessonEngine';
 import { usePlayback } from './PlaybackContext';
 import { audioEngine } from '../utils/audioEngine';
@@ -24,11 +24,12 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [lessonProgress, setLessonProgress] = useState(0);
   const [lessonFeedback, setLessonFeedback] = useState<FeedbackType>(null);
   
-  const lessonStartTime = useRef<number>(0);
+  const [startTime, setStartTime] = useState<number>(0);
 
   const startLesson = useCallback((active: boolean) => {
     if (active) {
-      lessonStartTime.current = audioEngine.currentTime;
+      const now = audioEngine.currentTime;
+      setStartTime(now);
       setLessonProgress(0);
     }
     setLessonActive(active);
@@ -50,7 +51,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const expectedNote = activeLesson.notes[lessonProgress];
       if (!expectedNote) return;
 
-      const elapsedMs = (audioEngine.currentTime - lessonStartTime.current) * 1000;
+      const elapsedMs = (audioEngine.currentTime - startTime) * 1000;
       const feedback = evaluateNoteTiming(
         note,
         expectedNote.note,
@@ -74,7 +75,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       
       setTimeout(() => setLessonFeedback(null), 500);
     }
-  }, [lessonActive, lessonProgress, activeLesson, onNotePlayed]);
+  }, [lessonActive, lessonProgress, activeLesson, onNotePlayed, startTime]);
 
   return (
     <LessonContext.Provider value={{
@@ -84,7 +85,7 @@ export const LessonProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       lessonProgress, setLessonProgress,
       lessonFeedback,
       checkNote,
-      startTime: lessonStartTime.current
+      startTime
     }}>
       {children}
     </LessonContext.Provider>

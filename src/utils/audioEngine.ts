@@ -1,11 +1,14 @@
+import type { AudioNoteInstance } from '../types/audio';
+
 class AudioEngine {
   private audioCtx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private compressor: DynamicsCompressorNode | null = null;
-  private activeNotes: Map<string, Set<{ 
-    oscillators: OscillatorNode[]; 
-    gain: GainNode;
-  }>> = new Map();
+  private activeNotes: Map<string, Set<AudioNoteInstance>> = new Map();
+
+  public get context() {
+    return this.getContext();
+  }
 
   private getContext() {
     if (!this.audioCtx) {
@@ -62,9 +65,6 @@ class AudioEngine {
     osc.connect(gain);
     harmonicOsc.connect(gain);
     
-    // Create a local harmonic gain if we wanted more control, 
-    // but for now we'll just mix them and adjust volume via master or local gain.
-    // To satisfy the "20% volume" requirement for harmonics specifically:
     const harmonicGain = ctx.createGain();
     harmonicGain.gain.setValueAtTime(0.2, startTime);
     harmonicOsc.disconnect();
@@ -76,7 +76,7 @@ class AudioEngine {
     osc.start(startTime);
     harmonicOsc.start(startTime);
 
-    const noteInstance = { oscillators: [osc, harmonicOsc], gain };
+    const noteInstance: AudioNoteInstance = { oscillators: [osc, harmonicOsc], gain };
     if (!this.activeNotes.has(noteId)) {
       this.activeNotes.set(noteId, new Set());
     }
@@ -96,7 +96,13 @@ class AudioEngine {
         gain.gain.setValueAtTime(gain.gain.value, stopTime);
         gain.gain.exponentialRampToValueAtTime(0.001, stopTime + release);
         
-        oscillators.forEach(osc => osc.stop(stopTime + release + 0.01));
+        oscillators.forEach(osc => {
+          try {
+            osc.stop(stopTime + release + 0.01);
+          } catch {
+            // Oscillator might already be stopped
+          }
+        });
       });
       
       this.activeNotes.delete(noteId);
@@ -119,6 +125,16 @@ class AudioEngine {
 
     osc.start(time);
     osc.stop(time + 0.05);
+  }
+
+  dispose() {
+    this.activeNotes.forEach((_, noteId) => {
+      this.stopNote(noteId);
+    });
+    if (this.audioCtx) {
+      this.audioCtx.close();
+      this.audioCtx = null;
+    }
   }
 }
 
